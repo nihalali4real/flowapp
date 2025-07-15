@@ -1,18 +1,27 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { CheckCircle, Award, BookOpen, Settings, Play, Pause, RotateCcw, Plus, Edit, Trash2, X, Star, Sun, Moon, Zap, Coffee, ShieldCheck, Target, Trophy, Sunrise, CalendarDays, UserMinus, LayoutGrid, SlidersHorizontal, ChevronsUp, ClipboardCheck, Sunset, CloudSun, CloudMoon, BookHeart, BedDouble, Lock, Unlock, AlertTriangle, Heart, Clock } from 'lucide-react';
 
 // --- Firebase Configuration ---
-// These variables are placeholders and will be provided by the environment.
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-pomodoro-app';
+// This is the standard and correct way for a Vite project to handle secrets.
+// It reads from an environment variable that you will set in your hosting provider.
+const firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG || '{}');
+
+// We get the appId from the config object itself.
+const appId = firebaseConfig.appId; 
 
 // --- Firebase Initialization ---
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// This check prevents the app from crashing if the config is missing.
+let app, auth, db;
+if (firebaseConfig.apiKey) {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+} else {
+    console.error("CRITICAL: Firebase config is missing. Ensure the VITE_FIREBASE_CONFIG environment variable is set in your hosting provider.");
+}
 
 // --- Main App Component ---
 export default function App() {
@@ -24,16 +33,13 @@ export default function App() {
 
     // --- Authentication ---
     useEffect(() => {
+        if (!auth) return; // Don't run auth logic if Firebase isn't configured
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 setUserId(user.uid);
             } else {
                 try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
+                    await signInAnonymously(auth);
                 } catch (error) {
                     console.error("Authentication Error:", error);
                 }
@@ -57,6 +63,20 @@ export default function App() {
     };
 
     // --- Render Logic ---
+    // Display a clear error message if the configuration is missing.
+    if (!firebaseConfig.apiKey) {
+        return (
+             <div className="flex items-center justify-center h-screen bg-red-50 text-red-800">
+                <div className="text-center p-8 border-2 border-red-300 rounded-lg shadow-lg max-w-lg mx-4">
+                    <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-red-500" />
+                    <h1 className="text-2xl font-bold">Configuration Error</h1>
+                    <p className="mt-2">The application cannot connect to its database because the Firebase configuration is missing.</p>
+                    <p className="text-sm mt-2 text-gray-600">This is not your fault! The site owner needs to set the `VITE_FIREBASE_CONFIG` environment variable in the hosting settings.</p>
+                </div>
+            </div>
+        )
+    }
+
     if (!isAuthReady) {
         return (
             <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
