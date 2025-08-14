@@ -1,13 +1,101 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-to" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FocusFlow</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <h1>Flow</h1>
+
+        <!-- ====================================================== -->
+        <!-- START: PASTE THE NEW AUTHENTICATION SECTION HERE -->
+        <!-- This section adds the sign-up and login form. -->
+        <!-- ====================================================== -->
+        <div id="auth-container" class="auth-container">
+            <input type="email" id="email" placeholder="Email" class="auth-input" />
+            <input type="password" id="password" placeholder="Password" class="auth-input" />
+            <div class="auth-buttons">
+                <button id="signup-btn" class="auth-btn">Sign Up</button>
+                <button id="login-btn" class="auth-btn">Log In</button>
+            </div>
+            <button id="logout-btn" class="auth-btn logout-btn" style="display:none;">Log Out</button>
+            <p id="auth-status">Please sign in to save your sessions.</p>
+        </div>
+        <!-- ====================================================== -->
+        <!-- END: AUTHENTICATION SECTION -->
+        <!-- ====================================================== -->
+
+
+        <!-- This is your existing timer UI -->
+        <div class="timer-modes">
+            <button class="mode-btn active" data-mode="pomodoro">Pomodoro</button>
+            <button class="mode-btn" data-mode="shortBreak">Short Break</button>
+            <button class="mode-btn" data-mode="longBreak">Long Break</button>
+        </div>
+
+        <div class="timer">
+            <span id="minutes">25</span>
+            <span>:</span>
+            <span id="seconds">00</span>
+        </div>
+
+        <button id="start-stop-btn" class="start-btn">START</button>
+        
+        <!-- ====================================================== -->
+        <!-- START: PASTE THE NEW SESSION HISTORY SECTION HERE -->
+        <!-- This is where the user's saved sessions will be shown. -->
+        <!-- ====================================================== -->
+        <div id="session-history" class="session-history">
+            <h2>Your Past Sessions</h2>
+            <ul id="session-list">
+                <!-- Session data will be loaded here from Firestore -->
+            </ul>
+        </div>
+        <!-- ====================================================== -->
+        <!-- END: SESSION HISTORY SECTION -->
+        <!-- ====================================================== -->
+
+    </div>
+
+    <!-- ====================================================== -->
+    <!-- START: PASTE THE FIREBASE SCRIPTS HERE, BEFORE YOUR script.js -->
+    <!-- These scripts are required to connect your app to Firebase. -->
+    <!-- ====================================================== -->
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+    <script>
+      //
+      // !!! IMPORTANT !!!
+      // TODO: Replace this with your project's Firebase configuration object.
+      // You can find this in your Firebase project settings.
+      //
+      const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+      };
+
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const auth = firebase.auth();
+      const db = firebase.firestore();
+    </script>
+    <!-- ====================================================== -->
+    <!-- END: FIREBASE SCRIPTS -->
+    <!-- ====================================================== -->
+
+
+    <!-- This is your existing script tag, it must come AFTER the Firebase scripts -->
+    <script src="script.js" defer></script>
+</body>
 </html>
