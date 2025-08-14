@@ -10,10 +10,7 @@
     <div class="app-container">
         <h1>Flow</h1>
 
-        <!-- ====================================================== -->
-        <!-- START: PASTE THE NEW AUTHENTICATION SECTION HERE -->
-        <!-- This section adds the sign-up and login form. -->
-        <!-- ====================================================== -->
+        <!-- Authentication Section for user sign-up and login -->
         <div id="auth-container" class="auth-container">
             <input type="email" id="email" placeholder="Email" class="auth-input" />
             <input type="password" id="password" placeholder="Password" class="auth-input" />
@@ -24,12 +21,8 @@
             <button id="logout-btn" class="auth-btn logout-btn" style="display:none;">Log Out</button>
             <p id="auth-status">Please sign in to save your sessions.</p>
         </div>
-        <!-- ====================================================== -->
-        <!-- END: AUTHENTICATION SECTION -->
-        <!-- ====================================================== -->
 
-
-        <!-- This is your existing timer UI -->
+        <!-- Original Timer UI -->
         <div class="timer-modes">
             <button class="mode-btn active" data-mode="pomodoro">Pomodoro</button>
             <button class="mode-btn" data-mode="shortBreak">Short Break</button>
@@ -44,42 +37,27 @@
 
         <button id="start-stop-btn" class="start-btn">START</button>
         
-        <!-- ====================================================== -->
-        <!-- START: PASTE THE NEW SESSION HISTORY SECTION HERE -->
-        <!-- This is where the user's saved sessions will be shown. -->
-        <!-- ====================================================== -->
-        <div id="session-history" class="session-history">
+        <!-- Session History Section -->
+        <div id="session-history" class="session-history" style="display:none;">
             <h2>Your Past Sessions</h2>
             <ul id="session-list">
                 <!-- Session data will be loaded here from Firestore -->
             </ul>
         </div>
-        <!-- ====================================================== -->
-        <!-- END: SESSION HISTORY SECTION -->
-        <!-- ====================================================== -->
-
     </div>
 
-    <!-- ====================================================== -->
-    <!-- START: PASTE THE FIREBASE SCRIPTS HERE, BEFORE YOUR script.js -->
-    <!-- These scripts are required to connect your app to Firebase. -->
-    <!-- ====================================================== -->
-
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDK Scripts -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 
+    <!-- Your Firebase Configuration -->
     <script>
-      //
-      // This section has been updated with your specific project keys.
-      // You can copy this entire file.
-      //
       const firebaseConfig = {
         apiKey: "AIzaSyCQuqlYYZQgg25sPOuXwYPzvX7vTg4XriQ",
         authDomain: "flowpomodoro-ca5f8.firebaseapp.com",
         projectId: "flowpomodoro-ca5f8",
-        storageBucket: "flowpomodoro-ca5f8.appspot.com", // Corrected this line for you
+        storageBucket: "flowpomodoro-ca5f8.appspot.com",
         messagingSenderId: "279316417490",
         appId: "1:279316417490:web:d9b30b5be3734d8613560b",
         measurementId: "G-WP3DPQPCTJ"
@@ -90,12 +68,259 @@
       const auth = firebase.auth();
       const db = firebase.firestore();
     </script>
-    <!-- ====================================================== -->
-    <!-- END: FIREBASE SCRIPTS -->
-    <!-- ====================================================== -->
+
+    <!-- All Application JavaScript Logic -->
+    <script>
+        // =================================================================
+        // script.js - Final Version with Firebase Integration
+        // =================================================================
+
+        // --- Original Timer DOM Elements ---
+        const minutesDisplay = document.getElementById('minutes');
+        const secondsDisplay = document.getElementById('seconds');
+        const startStopBtn = document.getElementById('start-stop-btn');
+        const modeButtons = document.querySelectorAll('.mode-btn');
+
+        // --- NEW: Authentication & Data DOM Elements ---
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const signUpButton = document.getElementById('signup-btn');
+        const logInButton = document.getElementById('login-btn');
+        const logOutButton = document.getElementById('logout-btn');
+        const authStatus = document.getElementById('auth-status');
+        const authContainer = document.getElementById('auth-container');
+        const sessionList = document.getElementById('session-list');
+        const sessionHistory = document.getElementById('session-history');
 
 
-    <!-- This is your existing script tag, it must come AFTER the Firebase scripts -->
-    <script src="script.js" defer></script>
+        // --- Original Timer Logic Variables ---
+        let timer;
+        let minutes = 25;
+        let seconds = 0;
+        let mode = 'pomodoro'; // Can be 'pomodoro', 'shortBreak', or 'longBreak'
+        let isRunning = false;
+        const timers = {
+            pomodoro: 25,
+            shortBreak: 5,
+            longBreak: 15
+        };
+
+        // --- NEW: This variable will store the logged-in user's unique ID ---
+        let currentUserId = null; 
+
+        // =================================================================
+        // SECTION 1: FIREBASE AUTHENTICATION
+        // Handles user sign-up, login, and logout.
+        // =================================================================
+
+        // --- Handles new user sign-ups ---
+        signUpButton.addEventListener('click', () => {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            if (!email || !password) {
+                alert("Please enter both email and password.");
+                return;
+            }
+            // Use Firebase auth to create a new user
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    console.log('Successfully signed up!', userCredential.user);
+                })
+                .catch((error) => {
+                    console.error("Signup Error:", error);
+                    alert("Error signing up: " + error.message);
+                });
+        });
+
+        // --- Handles existing user logins ---
+        logInButton.addEventListener('click', () => {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            if (!email || !password) {
+                alert("Please enter both email and password.");
+                return;
+            }
+            // Use Firebase auth to sign in a user
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    console.log('Successfully logged in!', userCredential.user);
+                })
+                .catch((error) => {
+                    console.error("Login Error:", error);
+                    alert("Error logging in: " + error.message);
+                });
+        });
+
+        // --- Handles user logouts ---
+        logOutButton.addEventListener('click', () => {
+            auth.signOut();
+        });
+
+        // --- THE MOST IMPORTANT AUTH FUNCTION ---
+        // This function is a listener. It runs automatically whenever
+        // a user logs in or logs out of your application.
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // --- This block runs when a user is SIGNED IN ---
+                console.log('Auth state changed: User is signed in with UID:', user.uid);
+                currentUserId = user.uid; // Save the user's ID
+                
+                // Update the UI to a "logged-in" state
+                authStatus.textContent = `Signed in as ${user.email}`;
+                authContainer.style.display = 'none'; // Hide the login form
+                logOutButton.style.display = 'block'; // Show the logout button
+                sessionHistory.style.display = 'block'; // Show the session history section
+
+                // Now that the user is logged in, fetch their saved sessions
+                fetchSessionsFromFirestore();
+
+            } else {
+                // --- This block runs when a user is SIGNED OUT ---
+                console.log('Auth state changed: User is signed out.');
+                currentUserId = null; // Clear the user's ID
+
+                // Update the UI to a "logged-out" state
+                authStatus.textContent = 'Please sign in to save your sessions.';
+                authContainer.style.display = 'block'; // Show the login form
+                logOutButton.style.display = 'none'; // Hide the logout button
+                sessionHistory.style.display = 'none'; // Hide the session history section
+                sessionList.innerHTML = ''; // Clear any visible session data
+            }
+        });
+
+
+        // =================================================================
+        // SECTION 2: FIRESTORE DATABASE INTERACTIONS
+        // Handles saving and loading user-specific data.
+        // =================================================================
+
+        // --- Saves a completed session to the database ---
+        function saveSessionToFirestore() {
+            // First, check if a user is actually logged in.
+            if (!currentUserId) {
+                console.log("Cannot save session. No user is logged in.");
+                return; 
+            }
+
+            // This creates a path in your database like: 'users/USER_ID_123/sessions'
+            // This matches the security rule you created, so only this user can write here.
+            db.collection('users').doc(currentUserId).collection('sessions').add({
+                mode: mode,
+                duration: timers[mode],
+                completedAt: firebase.firestore.FieldValue.serverTimestamp() // Use the server's time
+            }).then(() => {
+                console.log("Session saved successfully!");
+            }).catch(error => {
+                console.error("Error saving session: ", error);
+            });
+        }
+
+        // --- Fetches the user's past sessions from the database ---
+        function fetchSessionsFromFirestore() {
+            if (!currentUserId) return; // Exit if no user is logged in
+
+            // This reads from the same user-specific path
+            db.collection('users').doc(currentUserId).collection('sessions')
+              .orderBy('completedAt', 'desc') // Show the newest sessions first
+              .limit(10) // Only get the last 10 sessions to keep it tidy
+              .onSnapshot(snapshot => { // Use onSnapshot for real-time updates
+                  sessionList.innerHTML = ''; // Clear the old list first
+                  if (snapshot.empty) {
+                      sessionList.innerHTML = '<li>No sessions recorded yet.</li>';
+                      return;
+                  }
+                  // Loop through the retrieved sessions and display them
+                  snapshot.forEach(doc => {
+                      const session = doc.data();
+                      const date = session.completedAt ? session.completedAt.toDate().toLocaleDateString() : 'Just now';
+                      const listItem = document.createElement('li');
+                      listItem.textContent = `Completed a ${session.duration} min '${session.mode}' session on ${date}`;
+                      sessionList.appendChild(listItem);
+                  });
+              }, error => {
+                  console.error("Error fetching sessions: ", error);
+              });
+        }
+
+
+        // =================================================================
+        // SECTION 3: ORIGINAL POMODORO TIMER LOGIC
+        // This is your app's core functionality, modified slightly.
+        // =================================================================
+
+        function startTimer() {
+            isRunning = true;
+            startStopBtn.textContent = 'STOP';
+            timer = setInterval(() => {
+                if (seconds === 0) {
+                    if (minutes === 0) {
+                        // Timer finished
+                        clearInterval(timer);
+                        isRunning = false;
+                        startStopBtn.textContent = 'START';
+                        
+                        // --- MODIFICATION ---
+                        // If the completed session was a 'pomodoro', save it to Firestore.
+                        if (mode === 'pomodoro') {
+                            saveSessionToFirestore();
+                        }
+                        
+                        alert(`${mode} session finished!`);
+
+                        // Automatically switch to the next appropriate mode
+                        if (mode === 'pomodoro') {
+                            switchMode({ target: { getAttribute: () => 'shortBreak' }});
+                        } else {
+                            switchMode({ target: { getAttribute: () => 'pomodoro' }});
+                        }
+
+                    } else {
+                        minutes--;
+                        seconds = 59;
+                    }
+                } else {
+                    seconds--;
+                }
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        function stopTimer() {
+            isRunning = false;
+            clearInterval(timer);
+            startStopBtn.textContent = 'START';
+        }
+
+        function updateTimerDisplay() {
+            minutesDisplay.textContent = String(minutes).padStart(2, '0');
+            secondsDisplay.textContent = String(seconds).padStart(2, '0');
+        }
+
+        function switchMode(event) {
+            mode = event.target.getAttribute('data-mode');
+            
+            modeButtons.forEach(button => button.classList.remove('active'));
+            event.target.classList.add('active');
+
+            minutes = timers[mode];
+            seconds = 0;
+            
+            stopTimer();
+            updateTimerDisplay();
+        }
+
+        startStopBtn.addEventListener('click', () => {
+            if (isRunning) {
+                stopTimer();
+            } else {
+                startTimer();
+            }
+        });
+
+        modeButtons.forEach(button => button.addEventListener('click', switchMode));
+
+        // Set the initial timer display when the page loads
+        updateTimerDisplay();
+    </script>
 </body>
 </html>
